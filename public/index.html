@@ -137,15 +137,9 @@
         createRoomBtn.addEventListener('click', () => {
             const nickname = lobbyUsername.value.trim();
             const roomName = lobbyCreateName.value.trim();
-            if(!nickname) return alert("Please type your nickname first!");
-            if(!roomName) return alert("Please specify a custom name for your new room!");
+            if(nickname === "") return alert("Please type your nickname first!");
+            if(roomName === "") return alert("Please specify a custom name for your new room!");
             
             socket.emit('create_room', { roomName, username: nickname });
         });
 
-               // Triggered when server returns generated room credentials
-        socket.on('room_created', (data) => {
-            alert("Room Created! Code: " + data.roomId);
-            // Instantly transition user straight into their new room
-            socket.emit('join_room', { roomId: data.roomId, username: data.username });
-        });
