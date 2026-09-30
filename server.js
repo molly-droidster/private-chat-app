@@ -4,7 +4,6 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 
-const app = reportExpressApp ? express() : express(); 
 const appInstance = express();
 const server = http.createServer(appInstance);
 const io = new Server(server, {
@@ -12,7 +11,7 @@ const io = new Server(server, {
 });
 
 const DATA_FILE = path.join(__dirname, 'messages.json');
-const ADMIN_PASSWORD = "admin1234"; 
+const ADMIN_PASSWORD = "admin1234"; // 🔒 Your secret password to wipe chat logs
 
 let messages = [];
 if (fs.existsSync(DATA_FILE)) {
@@ -30,11 +29,11 @@ function saveMessages() {
 appInstance.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
-    // 1. Assign a random fallback identity immediately on connection connection arrival
+    // 1. Assign a random identity immediately on connection arrival
     const generatedGuestName = `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
     socket.username = generatedGuestName;
 
-    // 2. Load historical scroll timeline logs to client
+    // 2. Load historical scroll logs to client
     socket.emit('chat_history', { messages, defaultName: generatedGuestName });
     
     // Broadcast arrival status row
