@@ -110,7 +110,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io("https://private-chat-app-849z.onrender.com");
+        const socket = io({ transports: ['websocket', 'polling'] });
         const chatWindow = document.getElementById('chat-window');
         const form = document.getElementById('chat-form');
         const msgInput = document.getElementById('message-input');
