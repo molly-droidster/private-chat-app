@@ -111,6 +111,8 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ transports: ['websocket', 'polling'] });
+        
+        // Match definitions exactly to HTML items
         const chatWindow = document.getElementById('chat-window');
         const form = document.getElementById('chat-form');
         const msgInput = document.getElementById('message-input');
@@ -134,12 +136,9 @@
         const replyPreviewText = document.getElementById('reply-preview-text');
         const cancelReplyBtn = document.getElementById('cancel-reply-btn');
 
+        // Handles creating a named channel 
         createRoomBtn.addEventListener('click', () => {
             const nickname = lobbyUsername.value.trim();
             const roomName = lobbyCreateName.value.trim();
             if(nickname === "") return alert("Please type your nickname first!");
             if(roomName === "") return alert("Please specify a custom name for your new room!");
-            
-            socket.emit('create_room', { roomName, username: nickname });
-        });
-
