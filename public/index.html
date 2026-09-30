@@ -3,34 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Room DM Chat</title>
+    <title>Instant Shared Chat</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
         html, body { height: 100%; width: 100%; overflow: hidden; background: #121212; color: #e0e0e0; }
         body { display: flex; flex-direction: column; }
         
-        #lobby-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #121212; display: flex; justify-content: center; align-items: center; z-index: 99999; }
-        .lobby-box { background: #1f1f1f; border: 1px solid #333; padding: 25px; border-radius: 12px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .lobby-box h2 { margin-bottom: 6px; color: #ffffff; }
-        .lobby-box p { color: #aaa; font-size: 13px; margin-bottom: 15px; }
-        .lobby-box input { width: 100%; padding: 11px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; margin-bottom: 10px; border-radius: 6px; outline: none; font-size: 15px; }
-        .divider { color: #666; margin: 12px 0; font-size: 11px; font-weight: bold; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #333; }
-        .lobby-btn { background: #00b0ff; color: #ffffff; border: none; padding: 11px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .lobby-btn.secondary { background: #333; border: 1px solid #444; }
-        .lobby-btn:hover { opacity: 0.9; }
-
-        header { background: #1f1f1f; color: #ffffff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
-        header .title-area { display: flex; flex-direction: column; gap: 4px; max-width: 50%; }
-        .room-name-display { font-weight: bold; font-size: 16px; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        .tag-wrapper { display: flex; align-items: center; gap: 6px; }
-        .room-tag { background: #2d2d2d; color: #00b0ff; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; border: 1px solid #444; width: fit-content; }
-        .share-btn { background: #2d2d2d; color: #e0e0e0; border: 1px solid #444; padding: 2px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; outline: none; }
-        .share-btn:hover { background: #3d3d3d; color: #ffffff; }
-
+        header { background: #1f1f1f; color: #ffffff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d2d; }
+        header h2 { font-size: 18px; color: #ffffff; }
         .controls { display: flex; align-items: center; gap: 8px; }
-        #settings input { padding: 6px 10px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; border-radius: 4px; font-size: 14px; outline: none; width: 110px; }
+        #settings input { padding: 6px 10px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; border-radius: 4px; font-size: 14px; outline: none; width: 120px; }
         .wipe-btn { background: #b71c1c; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
 
         #chat-window { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #121212; -webkit-overflow-scrolling: touch; }
@@ -41,7 +23,7 @@
         .reply-action-btn { background: none; border: none; color: #00b0ff; font-size: 11px; cursor: pointer; font-weight: bold; padding: 0; }
         .msg img { max-width: 100%; max-height: 200px; border-radius: 4px; display: block; margin-top: 5px; object-fit: contain; }
         
-        .quoted-context { background: #2d2d2d; border-left: 3px solid #00b0ff; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; color: #bbb; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .quoted-context { background: #2d2d2d; border-left: 3px solid #00b0ff; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; color: #bbb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .system { align-self: center; background: #1a237e; color: #90caf9; font-size: 11px; font-weight: bold; border-radius: 4px; padding: 4px 10px; border: none; }
         
         .footer-container { background: #1f1f1f; border-top: 1px solid #2d2d2d; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom); }
@@ -54,34 +36,30 @@
         .file-label { background: #2d2d2d; padding: 10px 12px; border-radius: 50%; cursor: pointer; font-size: 16px; user-select: none; border: 1px solid #444; }
         #file-input { display: none; }
         form button { background: #00b0ff; color: #ffffff; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 15px; }
+
+        /* Nickname Popup Modal CSS */
+        #name-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 99999; }
+        .modal-content { background: #1f1f1f; border: 1px solid #333; padding: 25px; border-radius: 12px; text-align: center; width: 85%; max-width: 350px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .modal-content h3 { margin-bottom: 6px; color: #ffffff; }
+        .modal-content p { color: #aaa; font-size: 13px; margin-bottom: 15px; }
+        .modal-content input { width: 100%; padding: 11px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; margin-bottom: 15px; border-radius: 6px; outline: none; font-size: 15px; }
+        .modal-btn { background: #00b0ff; color: #ffffff; border: none; padding: 11px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
     </style>
 </head>
 <body>
 
-    <div id="lobby-screen">
-        <div class="lobby-box">
-            <h2>🔒 Private Room Chat</h2>
-            <p>No account required. Create a named channel or join an existing one using its 6-character code.</p>
-            <input type="text" id="lobby-username-input" placeholder="Your Nickname (e.g. Alex)">
-            
-            <div class="divider">Option A: Create Room</div>
-            <input type="text" id="lobby-create-name-input" placeholder="Room Name (e.g. Secret Studio)">
-            <button class="lobby-btn" id="create-room-btn">Generate Room Code</button>
-            
-            <div class="divider">Option B: Join Room</div>
-            <input type="text" id="lobby-join-code-input" placeholder="Enter 6-Char Code (e.g. X8J2Q9)">
-            <button class="lobby-btn secondary" id="join-room-btn">Connect to Room</button>
+    <!-- On Arrival Nickname Entry Portal -->
+    <div id="name-modal">
+        <div class="modal-content">
+            <h3>Enter Your Nickname</h3>
+            <p>No account required. Type an identity label to jump straight into the global chat window.</p>
+            <input type="text" id="modal-name-input" placeholder="e.g. Charlie" autofocus>
+            <button class="modal-btn" id="modal-submit-btn">Enter Chat Room</button>
         </div>
     </div>
 
     <header>
-        <div class="title-area">
-            <span class="room-name-display" id="display-room-name">------</span>
-            <div class="tag-wrapper">
-                <span class="room-tag" id="display-room-id">Code: ------</span>
-                <button class="share-btn" id="share-code-btn" title="Copy code">🔗 Share</button>
-            </div>
-        </div>
+        <h2>💬 Shared Group Chat</h2>
         <div class="controls">
             <button class="wipe-btn" id="wipe-btn">🗑️ Wipe Chat</button>
             <div id="settings">
@@ -110,35 +88,97 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-const socket = io("https://onrender.com", { transports: ['polling', 'websocket'] });
-        
-        // Match definitions exactly to HTML items
+        // Force the browser to read the active root domain route automatically
+        const socket = io({ transports: ['websocket', 'polling'] });
         const chatWindow = document.getElementById('chat-window');
         const form = document.getElementById('chat-form');
         const msgInput = document.getElementById('message-input');
         const fileInput = document.getElementById('file-input');
         const nameInput = document.getElementById('username-input');
         const wipeBtn = document.getElementById('wipe-btn');
-        const displayRoomName = document.getElementById('display-room-name');
-        const displayRoomId = document.getElementById('display-room-id');
-        const shareCodeBtn = document.getElementById('share-code-btn');
 
-        const lobbyScreen = document.getElementById('lobby-screen');
-        const lobbyUsername = document.getElementById('lobby-username-input');
-        const lobbyCreateName = document.getElementById('lobby-create-name-input');
-        const lobbyJoinCode = document.getElementById('lobby-join-code-input');
-        const createRoomBtn = document.getElementById('create-room-btn');
-        const joinRoomBtn = document.getElementById('join-room-btn');
+        const nameModal = document.getElementById('name-modal');
+        const modalNameInput = document.getElementById('modal-name-input');
+        const modalSubmitBtn = document.getElementById('modal-submit-btn');
 
         let activeReplyTarget = null;
-        let globalRawRoomCode = "";
         const replyPreviewBar = document.getElementById('reply-preview-bar');
         const replyPreviewText = document.getElementById('reply-preview-text');
         const cancelReplyBtn = document.getElementById('cancel-reply-btn');
 
-        // Handles creating a named channel 
-        createRoomBtn.addEventListener('click', () => {
-            const nickname = lobbyUsername.value.trim();
-            const roomName = lobbyCreateName.value.trim();
-            if(nickname === "") return alert("Please type your nickname first!");
-            if(roomName === "") return alert("Please specify a custom name for your new room!");
+        // Handle the initial nickname entry 
+        modalSubmitBtn.addEventListener('click', () => {
+            const chosenName = modalNameInput.value.trim();
+            if (chosenName !== "") {
+                socket.emit('set_initial_name', chosenName);
+                nameInput.value = chosenName;
+                nameModal.style.display = 'none'; // Clear popup overlay away
+            } else {
+                alert('Please enter a nickname to join!');
+            }
+        });
+
+        modalNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') modalSubmitBtn.click();
+        });
+
+        window.initiateReply = function(msgId, sender, textPreview) {
+            activeReplyTarget = { id: msgId, username: sender, text: textPreview };
+            replyPreviewText.innerHTML = `Replying to <strong>@${sender}</strong>: <em>"${textPreview}"</em>`;
+            replyPreviewBar.style.display = 'flex';
+            msgInput.focus();
+        };
+
+        cancelReplyBtn.addEventListener('click', () => {
+            activeReplyTarget = null;
+            replyPreviewBar.style.display = 'none';
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (msgInput.value.trim()) {
+                socket.emit('chat_message', {
+                    text: msgInput.value,
+                    replyTo: activeReplyTarget
+                });
+                msgInput.value = '';
+                cancelReplyBtn.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                socket.emit('chat_image', {
+                    base64Data: event.target.result,
+                    replyTo: activeReplyTarget
+                });
+                cancelReplyBtn.click();
+            };
+            reader.readAsDataURL(file);
+            fileInput.value = ''; 
+        });
+
+        nameInput.addEventListener('change', () => {
+            if (nameInput.value.trim()) {
+                socket.emit('change_username', nameInput.value);
+            }
+        });
+
+        wipeBtn.addEventListener('click', () => {
+            const password = prompt("Enter Admin Password to clear chat logs:");
+            if (password !== null) {
+                socket.emit('wipe_history', password);
+            }
+        });
+
+        function appendMessage(data) {
+            const div = document.createElement('div');
+            div.classList.add('msg');
+            div.setAttribute('data-id', data.id);
+            
+            let elementsHTML = '';
+            if (data.replyTo) {
