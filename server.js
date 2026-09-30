@@ -13,6 +13,9 @@ const io = new Server(server, {
 const DATA_FILE = path.join(__dirname, 'messages.json');
 const ADMIN_PASSWORD = "admin1234"; // 🔒 Your secret password to wipe chat logs
 
+// ⌨️ Tracks socket IDs and nicknames currently typing
+let activeTypers = {}; 
+
 let messages = [];
 if (fs.existsSync(DATA_FILE)) {
     try {
@@ -38,6 +41,17 @@ io.on('connection', (socket) => {
     
     // Broadcast arrival status row
     io.emit('system_message', `${socket.username} joined the chat`);
+
+    // ⌨️ Listen for incoming typing state updates from frontend
+    socket.on('typing', (data) => {
+        if (data.isTyping) {
+            activeTypers[socket.id] = socket.username;
+        } else {
+            delete activeTypers[socket.id];
+        }
+        // Broadcast the active list of typers to everyone else
+        io.emit('user_typing', Object.values(activeTypers));
+    });
 
     socket.on('chat_message', (data) => {
         if (!data.text || !data.text.trim()) return;
@@ -72,6 +86,11 @@ io.on('connection', (socket) => {
         const oldName = socket.username;
         if (newName.trim() && newName.trim() !== oldName) {
             socket.username = newName.trim();
+            // If they change their name while typing, update it in active trackers
+            if (activeTypers[socket.id]) {
+                activeTypers[socket.id] = socket.username;
+                io.emit('user_typing', Object.values(activeTypers));
+            }
             io.emit('system_message', `${oldName} changed their name to ${socket.username}`);
         }
     });
@@ -88,6 +107,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        // Clear them out of the typing list if they disconnect mid-sentence
+        delete activeTypers[socket.id];
+        io.emit('user_typing', Object.values(activeTypers));
+
         if (socket.username) {
             io.emit('system_message', `${socket.username} left the chat`);
         }
