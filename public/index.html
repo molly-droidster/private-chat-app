@@ -143,6 +143,9 @@
             socket.emit('create_room', { roomName, username: nickname });
         });
 
+               // Triggered when server returns generated room credentials
         socket.on('room_created', (data) => {
-
-
+            alert("Room Created! Code: " + data.roomId);
+            // Instantly transition user straight into their new room
+            socket.emit('join_room', { roomId: data.roomId, username: data.username });
+        });
