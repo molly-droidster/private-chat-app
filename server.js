@@ -1,26 +1,28 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 
-
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    maxHttpBufferSize: 1e7 // 10MB limit for images
-});
 
+// 🔒 Updates Socket.IO server engine settings to dynamically allow web connections
+const io = new Server(server, {
+    maxHttpBufferSize: 1e7, // 10MB limit for images
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 const DATA_DIR = path.join(__dirname, 'rooms_data');
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR);
 }
 
-
 const ROOMS_REGISTRY_FILE = path.join(DATA_DIR, 'rooms_registry.json');
 const ADMIN_PASSWORD = "admin1234";
-
 
 let roomsRegistry = {};
 if (fs.existsSync(ROOMS_REGISTRY_FILE)) {
@@ -31,17 +33,14 @@ if (fs.existsSync(ROOMS_REGISTRY_FILE)) {
     }
 }
 
-
 function saveRegistry() {
     fs.writeFileSync(ROOMS_REGISTRY_FILE, JSON.stringify(roomsRegistry, null, 2));
 }
-
 
 function getRoomFile(roomId) {
     const safeRoomId = roomId.toUpperCase().replace(/[^A-Z0-9]/g, '_');
     return path.join(DATA_DIR, `room_${safeRoomId}.json`);
 }
-
 
 function loadRoomMessages(roomId) {
     const file = getRoomFile(roomId);
@@ -55,20 +54,16 @@ function loadRoomMessages(roomId) {
     return [];
 }
 
-
 function saveRoomMessages(roomId, messages) {
     const file = getRoomFile(roomId);
     fs.writeFileSync(file, JSON.stringify(messages, null, 2));
 }
 
-
 app.use(express.static(path.join(__dirname, 'public')));
-
 
 io.on('connection', (socket) => {
     socket.username = "Anonymous";
     socket.currentRoom = null;
-
 
     socket.on('create_room', (data) => {
         const customName = data.roomName.trim() || "Private Room";
@@ -79,14 +74,11 @@ io.on('connection', (socket) => {
             roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
         } while (roomsRegistry[roomId]);
 
-
         roomsRegistry[roomId] = customName;
         saveRegistry();
 
-
         socket.emit('room_created', { roomId, roomName: customName, username });
     });
-
 
     socket.on('join_room', (data) => {
         const roomId = data.roomId.trim().toUpperCase();
@@ -94,7 +86,6 @@ io.on('connection', (socket) => {
         
         if (!roomId) return socket.emit('join_error', 'Please enter a room code.');
         if (!roomsRegistry[roomId]) return socket.emit('join_error', 'Room code not found.');
-
 
         const roomName = roomsRegistry[roomId];
         socket.username = username;
@@ -105,10 +96,8 @@ io.on('connection', (socket) => {
         const roomHistory = loadRoomMessages(roomId);
         socket.emit('chat_history', { messages: roomHistory, roomId, roomName, username });
 
-
         socket.to(roomId).emit('system_message', `${socket.username} joined the chat`);
     });
-
 
     socket.on('chat_message', (data) => {
         if (!socket.currentRoom || !data.text || !data.text.trim()) return;
@@ -128,10 +117,8 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('chat_message', msgData);
     });
 
-
     socket.on('chat_image', (data) => {
         if (!socket.currentRoom) return;
-
 
         const roomHistory = loadRoomMessages(socket.currentRoom);
         const msgData = {
@@ -148,7 +135,6 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('chat_message', msgData);
     });
 
-
     socket.on('change_username', (newName) => {
         const oldName = socket.username;
         if (newName.trim() && newName.trim() !== oldName && socket.currentRoom) {
@@ -156,7 +142,6 @@ io.on('connection', (socket) => {
             io.to(socket.currentRoom).emit('system_message', `${oldName} changed their name to ${socket.username}`);
         }
     });
-
 
     socket.on('wipe_history', (password) => {
         if (password === ADMIN_PASSWORD && socket.currentRoom) {
@@ -168,14 +153,12 @@ io.on('connection', (socket) => {
         }
     });
 
-
     socket.on('disconnect', () => {
         if (socket.currentRoom && socket.username !== "Anonymous") {
             io.to(socket.currentRoom).emit('system_message', `${socket.username} left the chat`);
         }
     });
 });
-
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Coded & Named DM App running on http://localhost:${PORT}`));
