@@ -12,7 +12,8 @@
         header { background: #1f1f1f; color: #ffffff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d2d; }
         header h2 { font-size: 18px; color: #ffffff; }
         .controls { display: flex; align-items: center; gap: 8px; }
-        #settings input { padding: 6px 10px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; border-radius: 4px; font-size: 14px; outline: none; width: 120px; }
+        #settings input { padding: 6px 10px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; border-radius: 4px; font-size: 14px; outline: none; width: 130px; }
+        #settings input::placeholder { color: #888; }
         .wipe-btn { background: #b71c1c; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
 
         #chat-window { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #121212; -webkit-overflow-scrolling: touch; }
@@ -36,27 +37,9 @@
         .file-label { background: #2d2d2d; padding: 10px 12px; border-radius: 50%; cursor: pointer; font-size: 16px; user-select: none; border: 1px solid #444; }
         #file-input { display: none; }
         form button { background: #00b0ff; color: #ffffff; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 15px; }
-
-        /* Nickname Popup Modal CSS */
-        #name-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 99999; }
-        .modal-content { background: #1f1f1f; border: 1px solid #333; padding: 25px; border-radius: 12px; text-align: center; width: 85%; max-width: 350px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .modal-content h3 { margin-bottom: 6px; color: #ffffff; }
-        .modal-content p { color: #aaa; font-size: 13px; margin-bottom: 15px; }
-        .modal-content input { width: 100%; padding: 11px; background: #2d2d2d; color: #ffffff; border: 1px solid #444; margin-bottom: 15px; border-radius: 6px; outline: none; font-size: 15px; }
-        .modal-btn { background: #00b0ff; color: #ffffff; border: none; padding: 11px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
     </style>
 </head>
 <body>
-
-    <!-- On Arrival Nickname Entry Portal -->
-    <div id="name-modal">
-        <div class="modal-content">
-            <h3>Enter Your Nickname</h3>
-            <p>No account required. Type an identity label to jump straight into the global chat window.</p>
-            <input type="text" id="modal-name-input" placeholder="e.g. Charlie" autofocus>
-            <button class="modal-btn" id="modal-submit-btn">Enter Chat Room</button>
-        </div>
-    </div>
 
     <header>
         <h2>💬 Shared Group Chat</h2>
@@ -88,7 +71,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Force the browser to read the active root domain route automatically
         const socket = io({ transports: ['websocket', 'polling'] });
         const chatWindow = document.getElementById('chat-window');
         const form = document.getElementById('chat-form');
@@ -97,30 +79,10 @@
         const nameInput = document.getElementById('username-input');
         const wipeBtn = document.getElementById('wipe-btn');
 
-        const nameModal = document.getElementById('name-modal');
-        const modalNameInput = document.getElementById('modal-name-input');
-        const modalSubmitBtn = document.getElementById('modal-submit-btn');
-
         let activeReplyTarget = null;
         const replyPreviewBar = document.getElementById('reply-preview-bar');
         const replyPreviewText = document.getElementById('reply-preview-text');
         const cancelReplyBtn = document.getElementById('cancel-reply-btn');
-
-        // Handle the initial nickname entry 
-        modalSubmitBtn.addEventListener('click', () => {
-            const chosenName = modalNameInput.value.trim();
-            if (chosenName !== "") {
-                socket.emit('set_initial_name', chosenName);
-                nameInput.value = chosenName;
-                nameModal.style.display = 'none'; // Clear popup overlay away
-            } else {
-                alert('Please enter a nickname to join!');
-            }
-        });
-
-        modalNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') modalSubmitBtn.click();
-        });
 
         window.initiateReply = function(msgId, sender, textPreview) {
             activeReplyTarget = { id: msgId, username: sender, text: textPreview };
@@ -182,3 +144,57 @@
             
             let elementsHTML = '';
             if (data.replyTo) {
+                elementsHTML += `<div class="quoted-context"><strong>@${data.replyTo.username}</strong>: ${data.replyTo.text}</div>`;
+            }
+
+            const plainTextPreview = data.type === 'text' ? data.text.replace(/"/g, '&quot;') : '📷 Photo';
+
+            if (data.type === 'text') {
+                elementsHTML += `<strong>${data.username}:</strong> <span>${data.text}</span>`;
+            } else if (data.type === 'image') {
+                elementsHTML += `<strong>${data.username}:</strong><br><img src="${data.image}">`;
+            }
+            
+            elementsHTML += `
+                <div class="msg-meta-row">
+                    <button class="reply-action-btn" onclick="initiateReply('${data.id}', '${data.username}', '${plainTextPreview}')">Reply</button>
+                    <span class="msg-meta">${data.time}</span>
+                </div>
+            `;
+            
+            div.innerHTML = elementsHTML;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        socket.on('chat_message', (data) => {
+            appendMessage(data);
+        });
+
+        socket.on('chat_history', (data) => {
+            // Fills out the top right name field with the guest ID generated by the server layout
+            nameInput.value = data.defaultName;
+            
+            chatWindow.innerHTML = '';
+            data.messages.forEach(msg => appendMessage(msg));
+        });
+
+        socket.on('history_wiped', () => {
+            chatWindow.innerHTML = '';
+            cancelReplyBtn.click();
+        });
+
+        socket.on('wipe_failed', (errorMsg) => {
+            alert(errorMsg);
+        });
+
+        socket.on('system_message', (text) => {
+            const div = document.createElement('div');
+            div.classList.add('msg', 'system');
+            div.innerText = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        });
+    </script>
+</body>
+</html>
