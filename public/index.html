@@ -110,7 +110,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({ transports: ['websocket', 'polling'] });
+const socket = io("https://onrender.com", { transports: ['polling', 'websocket'] });
         
         // Match definitions exactly to HTML items
         const chatWindow = document.getElementById('chat-window');
